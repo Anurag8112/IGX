@@ -1,7 +1,6 @@
 ﻿using System;
 using QuickFix;
 using QuickFix.Fields;
-using QuickFix.FIX44;
 using QuickFix.Transport;
 
 namespace IGX.FIX_Protocol
@@ -17,7 +16,15 @@ namespace IGX.FIX_Protocol
 
         public void FromApp(QuickFix.Message message, SessionID sessionID)
         {
-            Crack(message, sessionID);
+            try
+            {
+                // Crack the message to handle based on message type
+                Crack(message, sessionID);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error handling incoming message: {ex.Message}");
+            }
         }
 
         public void OnCreate(SessionID sessionID)
@@ -45,7 +52,7 @@ namespace IGX.FIX_Protocol
                     // Failover scenario - set sequence number to 1 and ResetSeqNumFlag to Y
                     logon.Set(new QuickFix.Fields.EncryptMethod(0)); // Use the correct encryption method value
                     logon.Set(new QuickFix.Fields.ResetSeqNumFlag(true));
-                    logon.Header.SetField(new MsgSeqNum(2));
+                    logon.Header.SetField(new MsgSeqNum(1));
                 }
                 else
                 {
@@ -65,22 +72,15 @@ namespace IGX.FIX_Protocol
             Console.WriteLine($"Received ExecutionReport: {message}");
         }
 
-        // Add other message handling methods if needed
-
         public void Connect()
         {
             try
             {
-                // Load the FIX settings from a configuration file
                 SessionSettings settings = new SessionSettings("quickfix.cfg");
-
-                // Create an instance of your custom application
                 IGXQuickFixApp application = new IGXQuickFixApp();
-
-                // Create an instance of the FIX initiator
                 FileStoreFactory storeFactory = new FileStoreFactory(settings);
                 ScreenLogFactory logFactory = new ScreenLogFactory(settings);
-                MessageFactory messageFactory = new MessageFactory();
+                var messageFactory = new DefaultMessageFactory();
                 SocketInitiator initiator = new SocketInitiator(application, storeFactory, settings, logFactory, messageFactory);
 
                 // Start the initiator and initiate the connection
